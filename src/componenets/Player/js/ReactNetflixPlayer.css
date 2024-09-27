@@ -1,0 +1,264 @@
+/* Container Styles */
+.container {
+    text-align: left;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background: #000;
+    overflow: hidden;
+  }
+  
+  .container.full-player {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10000;
+  }
+  
+  .container * {
+    outline: 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .container video {
+    height: 100% !important;
+    max-height: 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    cursor: none;
+  }
+  
+  .container video::cue {
+    color: #eee;
+    z-index: 4;
+    text-shadow: #222 0 0 5px;
+    background: none;
+  }
+  
+  /* Loading Styles */
+  .loading {
+    position: absolute;
+    height: 100% !important;
+    width: 100% !important;
+    display: flex;
+  }
+  
+  .loading div {
+    display: flex;
+    margin: auto;
+  }
+  
+  .loading div div {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: currentColor;
+    margin: auto 5px;
+    animation: toUpOpacity 1s linear infinite;
+  }
+  
+  .loading div div:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+  
+  .loading div div:nth-child(3) {
+    animation-delay: 0.2s;
+  }
+  
+  @keyframes toUpOpacity {
+    0% {
+      opacity: 0;
+      transform: translateY(0);
+    }
+    30% {
+      opacity: 1;
+      transform: translateY(-20px);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Standby Info Styles */
+  .standby-info {
+    position: absolute;
+    top: 0;
+    background: rgba(0, 0, 0, 0.8);
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0 50px;
+    transition: all 0.5s ease-out;
+    opacity: 0;
+  }
+  
+  .standby-info.show {
+    display: flex;
+    opacity: 1;
+  }
+  
+  .standby-info section {
+    margin: auto 0;
+    padding-top: 100px;
+    padding-left: 100px;
+  }
+  
+  .standby-info h3 {
+    color: #fff;
+    font-size: 1.1em;
+    margin-bottom: 5px;
+  }
+  
+  .standby-info h1 {
+    font-weight: bold;
+    font-size: 3em;
+    margin: 10px 0;
+  }
+  
+  .standby-info h2 {
+    font-size: 20px;
+    margin-top: -5px;
+    font-weight: bold;
+  }
+  
+  .standby-info footer {
+    margin-top: auto;
+    margin-bottom: 50px;
+    margin-left: auto;
+    text-transform: uppercase;
+    color: #ffffff;
+  }
+  
+  /* Video Preloading Styles */
+  .video-preloading {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    padding: 30px;
+    transition: all 0.5s ease-out;
+    display: none;
+    flex-direction: column;
+    opacity: 0;
+  }
+  
+  .video-preloading.show {
+    display: flex;
+    opacity: 1;
+  }
+  
+  .video-preloading.show-error section {
+    opacity: 1;
+  }
+  
+  .video-preloading header {
+    display: flex;
+    color: #ffffff;
+    align-items: center;
+  }
+  
+  .video-preloading header h1 {
+    font-size: 1.5em;
+    font-weight: bold;
+  }
+  
+  .video-preloading header h2 {
+    font-size: 1.1em;
+  }
+  
+  .video-preloading header svg {
+    color: #fff;
+    opacity: 0.5;
+    margin-left: auto;
+    font-size: 4em;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .video-preloading header svg:hover {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  
+  .video-preloading section {
+    text-align: center;
+    color: #ddd;
+    margin: auto;
+    transition: all 0.2s ease;
+    opacity: 0;
+  }
+  
+  .video-preloading section h1 {
+    font-size: 2em;
+  }
+  
+  .video-preloading section p {
+    font-size: 1.5em;
+    margin: 20px;
+  }
+  
+  .video-preloading .links-error {
+    display: inline-flex;
+    margin: auto;
+  }
+  
+  .video-preloading .links-error div {
+    color: #ddd;
+    background: #333;
+    display: flex;
+    align-items: center;
+    margin: 0 5px;
+    padding: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+  }
+  
+  .video-preloading .links-error div:hover {
+    background: #f78b28;
+    color: #ddd;
+  }
+  
+  /* Controls Styles */
+  .controls {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    transition: all 0.2s ease-out;
+    padding: 10px;
+    color: #fff;
+    font-size: 1.5em;
+    background: linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 1) 0%,
+      rgba(0, 0, 0, 0.7) 20%,
+      rgba(0, 0, 0, 0) 40%,
+      rgba(0, 0, 0, 0) 60%,
+      rgba(0, 0, 0, 0.7) 80%,
+      rgba(0, 0, 0, 1) 100%
+    );
+    opacity: 0;
+    transform: scale(1.2);
+  }
+  
+  .controls.show {
+    opacity: 1;
+    transform: scale(1);
+  }
+  
+  /* Additional CSS styles for other components can be added here */
+  
+  /* Note: For dynamic styles like primaryColor, use inline styles or CSS variables */
+  
