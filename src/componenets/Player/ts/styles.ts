@@ -273,6 +273,121 @@ export const Controls = styled.div<IControlsProps>`
   }
 `;
 
+export const ProgressBarContainer = styled.div<{ primaryColor: string; bufferedProgress: number; progressVideo: number }>`
+  position: relative;
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  overflow: visible; /* Change from hidden to visible to show the thumb */
+
+  .buffered-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.5);
+    width: ${props => props.bufferedProgress}%;
+    transition: width 0.1s ease;
+    border-radius: 3px;
+  }
+
+  .played-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: ${props => props.primaryColor};
+    width: ${props => props.progressVideo}%;
+    transition: width 0.1s ease;
+    z-index: 1;
+    border-radius: 3px;
+  }
+
+  .progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    z-index: 3; /* Increase z-index to ensure thumb is on top */
+
+    &:focus {
+      outline: none !important;
+    }
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: ${props => props.primaryColor};
+      cursor: pointer;
+      border: 2px solid #fff; /* Add white border for better visibility */
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      position: relative;
+      z-index: 4;
+    }
+
+    &::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: ${props => props.primaryColor};
+      cursor: pointer;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      position: relative;
+      z-index: 4;
+    }
+
+    &::-ms-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: ${props => props.primaryColor};
+      cursor: pointer;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    &:hover {
+      height: 7px;
+      top: -1px;
+      
+      &::-webkit-slider-thumb {
+        width: 20px;
+        height: 20px;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+      }
+
+      &::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+      }
+
+      &::-ms-thumb {
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+
+  &:hover {
+    height: 7px;
+    
+    .buffered-bar,
+    .played-bar {
+      height: 7px;
+    }
+  }
+`;
+
 export interface IVideoPreLoadingProps {
   show: boolean;
   colorTitle: string;
@@ -699,25 +814,92 @@ export const PreviewImage = styled.div`
   position: absolute;
   z-index: 10;
   display: flex;
-  background-color: rgba(0, 0, 0, 0.5);
+  flex-direction: column;
+  background-color: rgba(0, 0, 0, 0.8);
   pointer-events: none;
-  width: 160px;
-  height: 90px;
-  padding: 10px;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+
   img {
     width: 160px;
     height: 90px;
+    border-radius: 2px;
+    border: 1px solid #555;
     object-fit: cover;
-    border: 1px solid #ccc;
   }
-  .loading-spinner {
-    width: 20px;
-    height: 20px;
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: ${spin} 1s linear infinite;
-    margin: auto;
+
+  .sprite-thumbnail {
+    border-radius: 2px;
+    border: 1px solid #555;
+  }
+
+  .time-indicator {
+    color: white;
+    font-size: 12px;
+    text-align: center;
+    margin-top: 4px;
+    padding: 2px 4px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 2px;
+    font-weight: 500;
+  }
+
+  .loading-fallback {
+    width: 160px;
+    height: 90px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    border: 1px solid #555;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 11px;
+
+    .loading-spinner {
+      display: flex;
+      gap: 3px;
+      margin-bottom: 6px;
+
+      div {
+        width: 4px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 50%;
+        animation: loading-bounce 1.4s ease-in-out infinite both;
+
+        &:nth-child(1) {
+          animation-delay: -0.32s;
+        }
+
+        &:nth-child(2) {
+          animation-delay: -0.16s;
+        }
+
+        &:nth-child(3) {
+          animation-delay: 0s;
+        }
+      }
+    }
+
+    span {
+      opacity: 0.7;
+      font-size: 10px;
+    }
+  }
+
+  @keyframes loading-bounce {
+    0%, 80%, 100% {
+      transform: scale(0);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
+    }
   }
 `;
 
