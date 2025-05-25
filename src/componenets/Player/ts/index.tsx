@@ -648,6 +648,28 @@ export default function ReactNetflixPlayer({
     setStateFullScreen();
   }, [document.fullscreenElement]);
 
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only trigger play/pause if we're not clicking on controls
+    const target = e.target as HTMLElement;
+
+    console.log(target);
+    
+    
+    // Check if the click is on the video area (not on controls)
+    if (target.tagName === 'VIDEO' || 
+        target === playerElement.current ||
+        (!target.closest('.controls') && 
+         !target.closest('line-reproduction') && 
+         !target.closest('button') && 
+         !target.closest('[class*="Item"]') && 
+         !target.closest('.progress-bar'))) {
+      console.log('Container clicked - triggering play/pause');
+      e.preventDefault();
+      e.stopPropagation();
+      play();
+    }
+  };
+
   function renderLoading() {
     return (
       <Loading color={primaryColor}>
@@ -732,6 +754,7 @@ export default function ReactNetflixPlayer({
       onMouseMove={hoverScreen}
       ref={playerElement}
       onDoubleClick={chooseFullScreen}
+      onClick={handleContainerClick}
       fullPlayer={fullPlayer}
       hideVideo={!!error}
       fontFamily={fontFamily}
@@ -751,8 +774,18 @@ export default function ReactNetflixPlayer({
         onTimeUpdate={timeUpdate}
         onError={errorVideo}
         onEnded={onEndedFunction}
+        style={{ 
+          cursor: 'pointer',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain'
+        }}
         crossOrigin="anonymous"
-        />
+      />
 
         <video
         ref={previewVideoRef}

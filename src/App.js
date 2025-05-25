@@ -30,8 +30,9 @@ function App() {
         titleMedia="Episode 1"
         extraInfoMedia="42 min"
         playerLanguage="en"
-        src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" // Sample video URL
-        autoPlay={false}
+        // src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" // Sample video URL
+        src="http://127.0.0.1:5001/api/stream/m-64690" // Sample video URL
+        autoPlay={true}
         primaryColor="#03dffc"
         secondaryColor="#ffffff"
         fontFamily="Arial, sans-serif"
