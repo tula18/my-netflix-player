@@ -200,64 +200,83 @@ export default function ReactNetflixPlayer({
   // Add this state with your other states
   const [bufferedProgress, setBufferedProgress] = useState(0);
 
-  // Update the timeUpdate function to calculate buffered progress
-  const timeUpdate = (e: SyntheticEvent<HTMLVideoElement, Event>) => {
-    const currentSeekTime = Math.floor(e.currentTarget.currentTime);
-
-    // Reduce frequency - capture every 10-15 seconds instead of 5
-    if (currentSeekTime % 15 === 0 && !frameCache.current.has(currentSeekTime)) {
-      captureFrameAtTime(currentSeekTime);
-    }
-
-    setShowInfo(false);
-    setEnd(false);
-    if (playing) {
-      setPlaying(true);
-    }
-
-    if (waitingBuffer) {
-      setWaitingBuffer(false);
-    }
-
-    if (timerBuffer.current) {
-      clearTimeout(timerBuffer.current);
-    }
-
-    timerBuffer.current = setTimeout(() => setWaitingBuffer(true), 1000);
-
-    if (onTimeUpdate) {
-      onTimeUpdate(e);
-    }
-
+  // Ultra-optimized timeUpdate function for maximum performance
+  const timeUpdateRef = useRef<number>(0);
+  const bufferedUpdateRef = useRef<number>(0);
+  const lastProgressState = useRef<{playing: boolean, buffered: number, progress: number}>({playing: false, buffered: 0, progress: 0});
+  
+  const timeUpdate = useCallback((e: SyntheticEvent<HTMLVideoElement, Event>) => {
     const target = e.target as HTMLVideoElement;
     const currentTime = target.currentTime;
     const duration = target.duration;
 
-    // Calculate buffered progress
-    let bufferedEnd = 0;
-    const lengthBuffer = target.buffered.length;
+    // More aggressive throttling - update only 3 times per second for better performance
+    const now = Date.now();
+    if (now - timeUpdateRef.current < 333) return;
+    timeUpdateRef.current = now;
 
-    for (let i = 0; i < lengthBuffer; i++) {
-      const startCheck = target.buffered.start(i);
-      const endCheck = target.buffered.end(i);
+    // Smart state batching - only update when significant changes occur
+    const progressChanged = Math.abs(currentTime - lastProgressState.current.progress) > 1;
+    
+    if (progressChanged) {
+      lastProgressState.current.progress = currentTime;
+      setProgress(currentTime);
+    }
 
-      // Find the buffered range that contains the current time
-      if (currentTime >= startCheck && currentTime <= endCheck) {
-        bufferedEnd = endCheck;
-        break;
+    // Update buffered progress much less frequently (every 10 seconds)
+    if (now - bufferedUpdateRef.current > 10000) {
+      bufferedUpdateRef.current = now;
+      
+      // Calculate buffered progress only when needed
+      let bufferedEnd = 0;
+      const lengthBuffer = target.buffered.length;
+
+      for (let i = 0; i < lengthBuffer; i++) {
+        const startCheck = target.buffered.start(i);
+        const endCheck = target.buffered.end(i);
+
+        // Find the buffered range that contains the current time
+        if (currentTime >= startCheck && currentTime <= endCheck) {
+          bufferedEnd = endCheck;
+          break;
+        }
+        // Also check for buffered ranges ahead of current time
+        if (startCheck > currentTime) {
+          bufferedEnd = Math.max(bufferedEnd, endCheck);
+          break;
+        }
       }
-      // Also check for buffered ranges ahead of current time
-      if (startCheck > currentTime) {
-        bufferedEnd = Math.max(bufferedEnd, endCheck);
+
+      // Only update buffered state if significantly different
+      const bufferedPercent = duration > 0 ? (bufferedEnd / duration) * 100 : 0;
+      if (Math.abs(bufferedPercent - lastProgressState.current.buffered) > 5) {
+        lastProgressState.current.buffered = bufferedPercent;
+        setBufferedProgress(bufferedPercent);
       }
     }
 
-    // Calculate buffered percentage
-    const bufferedPercent = duration > 0 ? (bufferedEnd / duration) * 100 : 0;
-    setBufferedProgress(bufferedPercent);
+    // Clear buffer waiting state immediately if we get progress
+    if (waitingBuffer) {
+      setWaitingBuffer(false);
+    }
 
-    setProgress(target.currentTime);
-  };
+    // Reset buffer timeout less aggressively
+    if (timerBuffer.current) {
+      clearTimeout(timerBuffer.current);
+    }
+    timerBuffer.current = setTimeout(() => setWaitingBuffer(true), 8000);
+
+    // Call external onTimeUpdate much less frequently (every 2 seconds)
+    if (onTimeUpdate && now - timeUpdateRef.current > 2000) {
+      onTimeUpdate(e);
+    }
+
+    // Reset overlay states very infrequently
+    if (Math.floor(currentTime) % 15 === 0) {
+      setShowInfo(false);
+      setEnd(false);
+    }
+  }, [waitingBuffer, onTimeUpdate]);
 
   const goToPosition = (position: number) => {
     if (videoComponent.current) {
@@ -489,27 +508,30 @@ export default function ReactNetflixPlayer({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleProgressBarHover = (e: React.MouseEvent<HTMLInputElement>) => {
+  // Highly optimized hover handling with reduced responsiveness for performance
+  const handleProgressBarHover = useCallback((e: React.MouseEvent<HTMLInputElement>) => {
     if (!duration) return;
 
     const progressBar = e.currentTarget;
     const rect = progressBar.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const totalWidth = rect.width;
-    const percent = x / totalWidth;
+    const percent = Math.max(0, Math.min(1, x / totalWidth));
     const time = duration * percent;
 
+    // Throttle hover updates for better performance
+    const now = Date.now();
+    if (now - (handleProgressBarHover as any).lastUpdate < 100) return;
+    (handleProgressBarHover as any).lastUpdate = now;
+
+    // Update hover states
+    setHoverTime(time);
+    setHoverPosition({ x: e.clientX, y: rect.top });
+
+    // Handle preview capture if enabled - with more aggressive throttling
     const roundedTime = Math.floor(time);
 
-    setHoverTime(time);
-    setHoverPosition({ x: e.clientX - rect.left, y: rect.top });
-
-    // Clear previous timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-
-    // Check cache first for immediate display
+    // Check cache first - instant if available
     const cachedFrame = frameCache.current.get(roundedTime);
     if (cachedFrame) {
       setPreviewImage(cachedFrame);
@@ -517,23 +539,31 @@ export default function ReactNetflixPlayer({
       return;
     }
 
-    // Show loading state immediately
+    // Clear previous timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+
+    // Set loading state and debounce frame capture
     setPreviewImage(null);
     setLoadingPreview(true);
 
-    // Debounce frame capture by 150ms
+    // Increased debounce for better performance (800ms)
     hoverTimeoutRef.current = setTimeout(() => {
       if (!isCapturing) {
         captureFrameAtTime(time);
       }
-    }, 150);
-  };
+    }, 800);
+  }, [duration, isCapturing]);
 
+  // Ultra-optimized frame capture with maximum performance focus
   const captureFrameAtTime = useCallback(
     (time: number) => {
+      // Early return if already capturing
       if (!previewVideoRef.current || !previewCanvasRef.current || isCapturing) return;
 
-      const roundedTime = Math.floor(time);
+      // Round to nearest 5 seconds for better cache efficiency
+      const roundedTime = Math.floor(time / 5) * 5;
       
       // Check cache first
       const cachedFrame = frameCache.current.get(roundedTime);
@@ -543,8 +573,8 @@ export default function ReactNetflixPlayer({
         return;
       }
 
-      // Only proceed if we're still hovering
-      if (hoverTime === null) return;
+      // Only proceed if we're still hovering and not too far from requested time
+      if (hoverTime === null || Math.abs((hoverTime || 0) - roundedTime) > 8) return;
 
       const video = previewVideoRef.current;
       const canvas = previewCanvasRef.current;
@@ -552,43 +582,55 @@ export default function ReactNetflixPlayer({
       setIsCapturing(true);
       
       // Remove any existing event listener to prevent memory leaks
-      video.onseeked = null;
+      video.removeEventListener('seeked', video.onseeked as any);
       
-      // Set a timeout to prevent hanging
+      // Much shorter timeout for minimal UI blocking (300ms)
       const captureTimeout = setTimeout(() => {
         setIsCapturing(false);
         setLoadingPreview(false);
-        video.onseeked = null;
-      }, 2000);
+        video.removeEventListener('seeked', video.onseeked as any);
+      }, 300);
       
-      video.onseeked = () => {
+      const handleSeeked = () => {
         clearTimeout(captureTimeout);
         
-        // Double-check we're still hovering
-        if (hoverTime === null) {
+        // More lenient timing check for better performance
+        if (hoverTime === null || Math.abs((hoverTime || 0) - roundedTime) > 8) {
           setIsCapturing(false);
           setLoadingPreview(false);
           return;
         }
         
-        const context = canvas.getContext('2d');
+        const context = canvas.getContext('2d', {
+          alpha: false, // Disable alpha channel for better performance
+          willReadFrequently: false // We don't read pixels frequently
+        });
+        
         if (context) {
-          context.drawImage(video, 0, 0, canvas.width, canvas.height);
-          // Use lower quality for faster processing
-          const dataURL = canvas.toDataURL('image/jpeg', 0.6);
-          frameCache.current.set(roundedTime, dataURL);
-          
-          // Only set preview if we're still hovering at the same time
-          if (Math.abs((hoverTime || 0) - roundedTime) < 1) {
-            setPreviewImage(dataURL);
+          try {
+            // Use smaller canvas size for better performance (reduced from 160x90)
+            context.drawImage(video, 0, 0, 120, 68);
+            // Use extremely low quality for maximum performance
+            const dataURL = canvas.toDataURL('image/jpeg', 0.1);
+            frameCache.current.set(roundedTime, dataURL);
+            
+            // More lenient timing check for preview setting
+            if (Math.abs((hoverTime || 0) - roundedTime) < 8) {
+              setPreviewImage(dataURL);
+            }
+          } catch (error) {
+            console.warn('Failed to capture frame:', error);
           }
         }
         
         setIsCapturing(false);
         setLoadingPreview(false);
-        video.onseeked = null;
+        video.removeEventListener('seeked', handleSeeked);
       };
 
+      video.addEventListener('seeked', handleSeeked, { once: true });
+      
+      // Use less frequent seeking for performance
       video.currentTime = time;
     },
     [hoverTime, isCapturing]
@@ -596,14 +638,11 @@ export default function ReactNetflixPlayer({
 
   useEffect(() => {
     if (videoReady && videoComponent.current) {
-      // Remove automatic frame pre-loading or make it very sparse
-      // Only capture a few key frames
-      const keyTimes = [0, duration * 0.25, duration * 0.5, duration * 0.75];
-      keyTimes.forEach(time => {
-        if (time < duration) {
-          setTimeout(() => captureFrameAtTime(time), Math.random() * 1000);
-        }
-      });
+      // Don't pre-load frames if preview is disabled
+      if (!videoComponent.current) return;
+      
+      // Remove automatic frame pre-loading completely for better performance
+      // Only capture frames on-demand when hovering
     }
   }, [videoReady, duration]);
 
@@ -797,8 +836,8 @@ export default function ReactNetflixPlayer({
         />
         <canvas
         ref={previewCanvasRef}
-        width={160} // Adjust the size as needed
-        height={90}
+        width={120} // Reduced from 160 for better performance
+        height={68} // Reduced from 90 for better performance
         style={{ display: 'none' }}
         />
 
@@ -942,7 +981,10 @@ export default function ReactNetflixPlayer({
                   <FaVolumeMute onClick={() => setMutedAction(false)} />
                 </div>
               )}
+            </div>
 
+            {/* Center section for titleMedia */}
+            <div className="center">
               <div className="item-control info-video">
                 <span className="info-first">{titleMedia}</span>
                 <span className="info-second">{extraInfoMedia}</span>
